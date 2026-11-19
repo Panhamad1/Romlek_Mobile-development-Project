@@ -3,41 +3,38 @@ import 'package:romlek/model/assessment.dart';
 import 'package:romlek/model/assignment.dart';
 import 'package:romlek/model/class_schedule.dart';
 import 'package:romlek/model/class_session.dart';
-import 'package:romlek/model/course.dart';
 import 'package:romlek/service/course_service.dart';
 
 void main() {
-  late ClassSchedule first;
-  late ClassSchedule second;
-  late CourseService service;
-
-  setUp(() {
-    first = ClassSchedule(
-      id: 'schedule-1',
-      name: 'Term 1',
-      startDate: DateTime(2026, 11, 1),
-    );
-    second = ClassSchedule(
-      id: 'schedule-2',
-      name: 'Term 2',
-      startDate: DateTime(2027, 1, 1),
-    );
-    service = CourseService(
-      schedules: [first, second],
-      courses: [],
-      assignments: [],
-      assessments: [],
-    );
-  });
-
-  Course addCourse(String id, String name, String scheduleId) {
-    return service.addCourse(id: id, scheduleId: scheduleId, name: name);
-  }
-
   group('CourseService', () {
     test('course move previews conflicts and requires Save Anyway', () {
-      final course = addCourse('course-1', 'Mobile Development', first.id);
-      final other = addCourse('course-2', 'Database Systems', second.id);
+      final first = ClassSchedule(
+        id: 'schedule-1',
+        name: 'Term 1',
+        startDate: DateTime(2026, 11, 1),
+      );
+      final second = ClassSchedule(
+        id: 'schedule-2',
+        name: 'Term 2',
+        startDate: DateTime(2027, 1, 1),
+      );
+      final service = CourseService(
+        schedules: [first, second],
+        courses: [],
+        assignments: [],
+        assessments: [],
+      );
+
+      final course = service.addCourse(
+        id: 'course-1',
+        scheduleId: first.id,
+        name: 'Mobile Development',
+      );
+      final other = service.addCourse(
+        id: 'course-2',
+        scheduleId: second.id,
+        name: 'Database Systems',
+      );
       first.endDate = DateTime(2026, 11, 20);
       second.startDate = first.startDate;
       final makeup = ClassSession(
@@ -90,7 +87,28 @@ void main() {
     test(
       'moves the Course and its sessions while preserving related records',
       () {
-        final course = addCourse('course-1', 'Mobile Development', first.id);
+        final first = ClassSchedule(
+          id: 'schedule-1',
+          name: 'Term 1',
+          startDate: DateTime(2026, 11, 1),
+        );
+        final second = ClassSchedule(
+          id: 'schedule-2',
+          name: 'Term 2',
+          startDate: DateTime(2027, 1, 1),
+        );
+        final service = CourseService(
+          schedules: [first, second],
+          courses: [],
+          assignments: [],
+          assessments: [],
+        );
+
+        final course = service.addCourse(
+          id: 'course-1',
+          scheduleId: first.id,
+          name: 'Mobile Development',
+        );
         second.startDate = first.startDate;
         final weekly = ClassSession(
           id: 'w1',
@@ -165,7 +183,28 @@ void main() {
     test(
       'move warnings require acceptance and invalid moves leave data intact',
       () {
-        final course = addCourse('course-1', 'Mobile Development', first.id);
+        final first = ClassSchedule(
+          id: 'schedule-1',
+          name: 'Term 1',
+          startDate: DateTime(2026, 11, 1),
+        );
+        final second = ClassSchedule(
+          id: 'schedule-2',
+          name: 'Term 2',
+          startDate: DateTime(2027, 1, 1),
+        );
+        final service = CourseService(
+          schedules: [first, second],
+          courses: [],
+          assignments: [],
+          assessments: [],
+        );
+
+        final course = service.addCourse(
+          id: 'course-1',
+          scheduleId: first.id,
+          name: 'Mobile Development',
+        );
         final session = ClassSession(
           id: 'm1',
           courseId: course.id,
@@ -218,8 +257,33 @@ void main() {
     test(
       'timetable deletion removes all dependents and keeps unrelated data',
       () {
-        final course = addCourse('course-1', 'Mobile Development', first.id);
-        final other = addCourse('course-2', 'Database Systems', second.id);
+        final first = ClassSchedule(
+          id: 'schedule-1',
+          name: 'Term 1',
+          startDate: DateTime(2026, 11, 1),
+        );
+        final second = ClassSchedule(
+          id: 'schedule-2',
+          name: 'Term 2',
+          startDate: DateTime(2027, 1, 1),
+        );
+        final service = CourseService(
+          schedules: [first, second],
+          courses: [],
+          assignments: [],
+          assessments: [],
+        );
+
+        final course = service.addCourse(
+          id: 'course-1',
+          scheduleId: first.id,
+          name: 'Mobile Development',
+        );
+        final other = service.addCourse(
+          id: 'course-2',
+          scheduleId: second.id,
+          name: 'Database Systems',
+        );
         first.sessions.add(
           ClassSession(
             id: 'w1',
@@ -264,7 +328,28 @@ void main() {
     );
 
     test('timetable deletion validates everything before any removal', () {
-      final course = addCourse('course-1', 'Mobile Development', first.id);
+      final first = ClassSchedule(
+        id: 'schedule-1',
+        name: 'Term 1',
+        startDate: DateTime(2026, 11, 1),
+      );
+      final second = ClassSchedule(
+        id: 'schedule-2',
+        name: 'Term 2',
+        startDate: DateTime(2027, 1, 1),
+      );
+      final service = CourseService(
+        schedules: [first, second],
+        courses: [],
+        assignments: [],
+        assessments: [],
+      );
+
+      final course = service.addCourse(
+        id: 'course-1',
+        scheduleId: first.id,
+        name: 'Mobile Development',
+      );
       first.courseIds.add('missing');
       expect(
         () => service.deleteSchedule(first.id, confirmed: true),
@@ -297,7 +382,28 @@ void main() {
     });
 
     test('adds a course to exactly one timetable', () {
-      final course = addCourse('course-1', 'Mobile Development', first.id);
+      final first = ClassSchedule(
+        id: 'schedule-1',
+        name: 'Term 1',
+        startDate: DateTime(2026, 11, 1),
+      );
+      final second = ClassSchedule(
+        id: 'schedule-2',
+        name: 'Term 2',
+        startDate: DateTime(2027, 1, 1),
+      );
+      final service = CourseService(
+        schedules: [first, second],
+        courses: [],
+        assignments: [],
+        assessments: [],
+      );
+
+      final course = service.addCourse(
+        id: 'course-1',
+        scheduleId: first.id,
+        name: 'Mobile Development',
+      );
 
       expect(course.name, 'Mobile Development');
       expect(service.courses, [course]);
@@ -307,15 +413,43 @@ void main() {
     });
 
     test('invalid additions leave courses and membership unchanged', () {
+      final first = ClassSchedule(
+        id: 'schedule-1',
+        name: 'Term 1',
+        startDate: DateTime(2026, 11, 1),
+      );
+      final second = ClassSchedule(
+        id: 'schedule-2',
+        name: 'Term 2',
+        startDate: DateTime(2027, 1, 1),
+      );
+      final service = CourseService(
+        schedules: [first, second],
+        courses: [],
+        assignments: [],
+        assessments: [],
+      );
+
       expect(
-        () => addCourse('course-1', 'Mobile Development', 'missing'),
+        () => service.addCourse(
+          id: 'course-1',
+          scheduleId: 'missing',
+          name: 'Mobile Development',
+        ),
         throwsException,
       );
       expect(
-        () => addCourse('', 'Mobile Development', first.id),
+        () => service.addCourse(
+          id: '',
+          scheduleId: first.id,
+          name: 'Mobile Development',
+        ),
         throwsException,
       );
-      expect(() => addCourse('course-1', '', first.id), throwsException);
+      expect(
+        () => service.addCourse(id: 'course-1', scheduleId: first.id, name: ''),
+        throwsException,
+      );
 
       expect(service.courses, isEmpty);
       expect(first.courseIds, isEmpty);
@@ -323,14 +457,43 @@ void main() {
     });
 
     test('rejects duplicate IDs and global names ignoring case', () {
-      final course = addCourse('course-1', 'Mobile Development', first.id);
+      final first = ClassSchedule(
+        id: 'schedule-1',
+        name: 'Term 1',
+        startDate: DateTime(2026, 11, 1),
+      );
+      final second = ClassSchedule(
+        id: 'schedule-2',
+        name: 'Term 2',
+        startDate: DateTime(2027, 1, 1),
+      );
+      final service = CourseService(
+        schedules: [first, second],
+        courses: [],
+        assignments: [],
+        assessments: [],
+      );
+
+      final course = service.addCourse(
+        id: 'course-1',
+        scheduleId: first.id,
+        name: 'Mobile Development',
+      );
 
       expect(
-        () => addCourse('course-1', 'Database Systems', second.id),
+        () => service.addCourse(
+          id: 'course-1',
+          scheduleId: second.id,
+          name: 'Database Systems',
+        ),
         throwsException,
       );
       expect(
-        () => addCourse('course-2', 'mobile DEVELOPMENT', second.id),
+        () => service.addCourse(
+          id: 'course-2',
+          scheduleId: second.id,
+          name: 'mobile DEVELOPMENT',
+        ),
         throwsException,
       );
 
@@ -340,10 +503,31 @@ void main() {
     });
 
     test('rejects an ID already referenced by a timetable', () {
+      final first = ClassSchedule(
+        id: 'schedule-1',
+        name: 'Term 1',
+        startDate: DateTime(2026, 11, 1),
+      );
+      final second = ClassSchedule(
+        id: 'schedule-2',
+        name: 'Term 2',
+        startDate: DateTime(2027, 1, 1),
+      );
+      final service = CourseService(
+        schedules: [first, second],
+        courses: [],
+        assignments: [],
+        assessments: [],
+      );
+
       second.courseIds.add('course-1');
 
       expect(
-        () => addCourse('course-1', 'Mobile Development', first.id),
+        () => service.addCourse(
+          id: 'course-1',
+          scheduleId: first.id,
+          name: 'Mobile Development',
+        ),
         throwsException,
       );
       expect(service.courses, isEmpty);
@@ -354,7 +538,28 @@ void main() {
     test(
       'renames without changing identity or membership, including same name',
       () {
-        final course = addCourse('course-1', 'Mobile Development', first.id);
+        final first = ClassSchedule(
+          id: 'schedule-1',
+          name: 'Term 1',
+          startDate: DateTime(2026, 11, 1),
+        );
+        final second = ClassSchedule(
+          id: 'schedule-2',
+          name: 'Term 2',
+          startDate: DateTime(2027, 1, 1),
+        );
+        final service = CourseService(
+          schedules: [first, second],
+          courses: [],
+          assignments: [],
+          assessments: [],
+        );
+
+        final course = service.addCourse(
+          id: 'course-1',
+          scheduleId: first.id,
+          name: 'Mobile Development',
+        );
 
         service.renameCourse(course.id, 'mobile DEVELOPMENT');
         expect(course.name, 'mobile DEVELOPMENT');
@@ -368,8 +573,33 @@ void main() {
     );
 
     test('invalid renames preserve the existing course', () {
-      final course = addCourse('course-1', 'Mobile Development', first.id);
-      addCourse('course-2', 'Database Systems', second.id);
+      final first = ClassSchedule(
+        id: 'schedule-1',
+        name: 'Term 1',
+        startDate: DateTime(2026, 11, 1),
+      );
+      final second = ClassSchedule(
+        id: 'schedule-2',
+        name: 'Term 2',
+        startDate: DateTime(2027, 1, 1),
+      );
+      final service = CourseService(
+        schedules: [first, second],
+        courses: [],
+        assignments: [],
+        assessments: [],
+      );
+
+      final course = service.addCourse(
+        id: 'course-1',
+        scheduleId: first.id,
+        name: 'Mobile Development',
+      );
+      service.addCourse(
+        id: 'course-2',
+        scheduleId: second.id,
+        name: 'Database Systems',
+      );
 
       expect(() => service.renameCourse(course.id, ''), throwsException);
 
@@ -388,9 +618,34 @@ void main() {
     test(
       'lists only selected timetable courses and supports an empty timetable',
       () {
+        final first = ClassSchedule(
+          id: 'schedule-1',
+          name: 'Term 1',
+          startDate: DateTime(2026, 11, 1),
+        );
+        final second = ClassSchedule(
+          id: 'schedule-2',
+          name: 'Term 2',
+          startDate: DateTime(2027, 1, 1),
+        );
+        final service = CourseService(
+          schedules: [first, second],
+          courses: [],
+          assignments: [],
+          assessments: [],
+        );
+
         expect(service.getCoursesForSchedule(first.id), isEmpty);
-        final course = addCourse('course-1', 'Mobile Development', first.id);
-        addCourse('course-2', 'Database Systems', second.id);
+        final course = service.addCourse(
+          id: 'course-1',
+          scheduleId: first.id,
+          name: 'Mobile Development',
+        );
+        service.addCourse(
+          id: 'course-2',
+          scheduleId: second.id,
+          name: 'Database Systems',
+        );
 
         final result = service.getCoursesForSchedule(first.id);
         expect(result, [course]);
@@ -402,10 +657,31 @@ void main() {
     );
 
     test('listing rejects dangling or duplicate membership', () {
+      final first = ClassSchedule(
+        id: 'schedule-1',
+        name: 'Term 1',
+        startDate: DateTime(2026, 11, 1),
+      );
+      final second = ClassSchedule(
+        id: 'schedule-2',
+        name: 'Term 2',
+        startDate: DateTime(2027, 1, 1),
+      );
+      final service = CourseService(
+        schedules: [first, second],
+        courses: [],
+        assignments: [],
+        assessments: [],
+      );
+
       first.courseIds.add('missing');
       expect(() => service.getCoursesForSchedule(first.id), throwsException);
       first.courseIds.clear();
-      final course = addCourse('course-1', 'Mobile Development', first.id);
+      final course = service.addCourse(
+        id: 'course-1',
+        scheduleId: first.id,
+        name: 'Mobile Development',
+      );
       first.courseIds.add(course.id);
 
       expect(() => service.getCoursesForSchedule(first.id), throwsException);
@@ -415,12 +691,37 @@ void main() {
     test(
       'confirmed deletion cascades related records and preserves other data',
       () {
-        final course = addCourse('course-1', 'Mobile Development', first.id);
-        final otherCourse = addCourse('course-2', 'Database Systems', first.id);
-        final otherTimetableCourse = addCourse(
-          'course-3',
-          'Networks',
-          second.id,
+        final first = ClassSchedule(
+          id: 'schedule-1',
+          name: 'Term 1',
+          startDate: DateTime(2026, 11, 1),
+        );
+        final second = ClassSchedule(
+          id: 'schedule-2',
+          name: 'Term 2',
+          startDate: DateTime(2027, 1, 1),
+        );
+        final service = CourseService(
+          schedules: [first, second],
+          courses: [],
+          assignments: [],
+          assessments: [],
+        );
+
+        final course = service.addCourse(
+          id: 'course-1',
+          scheduleId: first.id,
+          name: 'Mobile Development',
+        );
+        final otherCourse = service.addCourse(
+          id: 'course-2',
+          scheduleId: first.id,
+          name: 'Database Systems',
+        );
+        final otherTimetableCourse = service.addCourse(
+          id: 'course-3',
+          scheduleId: second.id,
+          name: 'Networks',
         );
         final weekly = ClassSession(
           id: 'session-1',
@@ -491,7 +792,28 @@ void main() {
     );
 
     test('cancelled deletion preserves course and related records', () {
-      final course = addCourse('course-1', 'Mobile Development', first.id);
+      final first = ClassSchedule(
+        id: 'schedule-1',
+        name: 'Term 1',
+        startDate: DateTime(2026, 11, 1),
+      );
+      final second = ClassSchedule(
+        id: 'schedule-2',
+        name: 'Term 2',
+        startDate: DateTime(2027, 1, 1),
+      );
+      final service = CourseService(
+        schedules: [first, second],
+        courses: [],
+        assignments: [],
+        assessments: [],
+      );
+
+      final course = service.addCourse(
+        id: 'course-1',
+        scheduleId: first.id,
+        name: 'Mobile Development',
+      );
       final assignment = Assignment(
         id: 'assignment-1',
         courseId: course.id,
@@ -506,7 +828,28 @@ void main() {
     });
 
     test('missing course deletion throws without removing data', () {
-      final course = addCourse('course-1', 'Mobile Development', first.id);
+      final first = ClassSchedule(
+        id: 'schedule-1',
+        name: 'Term 1',
+        startDate: DateTime(2026, 11, 1),
+      );
+      final second = ClassSchedule(
+        id: 'schedule-2',
+        name: 'Term 2',
+        startDate: DateTime(2027, 1, 1),
+      );
+      final service = CourseService(
+        schedules: [first, second],
+        courses: [],
+        assignments: [],
+        assessments: [],
+      );
+
+      final course = service.addCourse(
+        id: 'course-1',
+        scheduleId: first.id,
+        name: 'Mobile Development',
+      );
 
       expect(
         () => service.deleteCourse('missing', confirmed: true),
@@ -519,7 +862,28 @@ void main() {
     test(
       'inconsistent ownership blocks rename and deletion before changes',
       () {
-        final course = addCourse('course-1', 'Mobile Development', first.id);
+        final first = ClassSchedule(
+          id: 'schedule-1',
+          name: 'Term 1',
+          startDate: DateTime(2026, 11, 1),
+        );
+        final second = ClassSchedule(
+          id: 'schedule-2',
+          name: 'Term 2',
+          startDate: DateTime(2027, 1, 1),
+        );
+        final service = CourseService(
+          schedules: [first, second],
+          courses: [],
+          assignments: [],
+          assessments: [],
+        );
+
+        final course = service.addCourse(
+          id: 'course-1',
+          scheduleId: first.id,
+          name: 'Mobile Development',
+        );
         second.courseIds.add(course.id);
         final assignment = Assignment(
           id: 'assignment-1',
@@ -547,7 +911,28 @@ void main() {
     test(
       'session in a wrong timetable blocks deletion without partial changes',
       () {
-        final course = addCourse('course-1', 'Mobile Development', first.id);
+        final first = ClassSchedule(
+          id: 'schedule-1',
+          name: 'Term 1',
+          startDate: DateTime(2026, 11, 1),
+        );
+        final second = ClassSchedule(
+          id: 'schedule-2',
+          name: 'Term 2',
+          startDate: DateTime(2027, 1, 1),
+        );
+        final service = CourseService(
+          schedules: [first, second],
+          courses: [],
+          assignments: [],
+          assessments: [],
+        );
+
+        final course = service.addCourse(
+          id: 'course-1',
+          scheduleId: first.id,
+          name: 'Mobile Development',
+        );
         final session = ClassSession(
           id: 'session-1',
           courseId: course.id,

@@ -5,90 +5,64 @@ import 'package:romlek/model/course.dart';
 import 'package:romlek/service/timetable_service.dart';
 
 void main() {
-  late TimetableService service;
-  late ClassSchedule first;
-  late ClassSchedule second;
   final from = DateTime(2026, 11, 19);
   final to = DateTime(2026, 12, 1);
 
-  setUp(() {
-    first = ClassSchedule(
-      id: 's1',
-      name: 'Term 1',
-      startDate: DateTime(2026, 11, 19),
-      endDate: DateTime(2026, 12, 31),
-    );
-    second = ClassSchedule(
-      id: 's2',
-      name: 'Evening Classes',
-      startDate: first.startDate,
-      endDate: first.endDate,
-    );
-    first.courseIds.add('c1');
-    second.courseIds.add('c2');
-    service = TimetableService(
-      schedules: [first, second],
-      courses: [
-        Course(id: 'c1', name: 'Mobile Development'),
-        Course(id: 'c2', name: 'Database Systems'),
-      ],
-    );
-  });
-
-  ClassSession weekly(
-    String id, {
-    String courseId = 'c1',
-    int weekday = DateTime.monday,
-    int start = 480,
-    int end = 600,
-  }) {
-    return ClassSession(
-      id: id,
-      courseId: courseId,
-      type: ClassSessionType.weekly,
-      weekday: weekday,
-      startMinutes: start,
-      endMinutes: end,
-      room: 'Room A',
-      preparationNotes: 'Review notes',
-    );
-  }
-
-  ClassSession makeup(
-    String id,
-    DateTime date, {
-    int start = 600,
-    int end = 660,
-  }) {
-    return ClassSession(
-      id: id,
-      courseId: 'c1',
-      type: ClassSessionType.makeup,
-      date: date,
-      startMinutes: start,
-      endMinutes: end,
-    );
-  }
-
-  bool add(
-    ClassSession session, {
-    String scheduleId = 's1',
-    bool saveAnyway = false,
-  }) {
-    return service.addSession(
-      scheduleId,
-      session,
-      from: from,
-      to: to,
-      saveAnyway: saveAnyway,
-    );
-  }
-
   group('TimetableService', () {
     test('extending an ended weekly class rechecks newly active conflicts', () {
-      add(weekly('w1'));
+      final first = ClassSchedule(
+        id: 's1',
+        name: 'Term 1',
+        startDate: DateTime(2026, 11, 19),
+        endDate: DateTime(2026, 12, 31),
+      );
+      final second = ClassSchedule(
+        id: 's2',
+        name: 'Evening Classes',
+        startDate: first.startDate,
+        endDate: first.endDate,
+      );
+      first.courseIds.add('c1');
+      second.courseIds.add('c2');
+      final service = TimetableService(
+        schedules: [first, second],
+        courses: [
+          Course(id: 'c1', name: 'Mobile Development'),
+          Course(id: 'c2', name: 'Database Systems'),
+        ],
+      );
+
+      service.addSession(
+        's1',
+        ClassSession(
+          id: 'w1',
+          courseId: 'c1',
+          type: ClassSessionType.weekly,
+          weekday: DateTime.monday,
+          startMinutes: 480,
+          endMinutes: 600,
+          room: 'Room A',
+          preparationNotes: 'Review notes',
+        ),
+        from: from,
+        to: to,
+      );
       service.endWeeklySession('s1', 'w1', DateTime(2026, 11, 23));
-      add(weekly('w2', courseId: 'c2'), scheduleId: 's2');
+      service.addSession(
+        's2',
+        ClassSession(
+          id: 'w2',
+          courseId: 'c2',
+          type: ClassSessionType.weekly,
+          weekday: DateTime.monday,
+          startMinutes: 480,
+          endMinutes: 600,
+          room: 'Room A',
+          preparationNotes: 'Review notes',
+        ),
+        from: from,
+        to: to,
+      );
       expect(service.findConflicts(from, to), isEmpty);
       expect(
         service.previewEndWeeklySession('s1', 'w1', DateTime(2026, 11, 30)),
@@ -112,15 +86,58 @@ void main() {
     });
 
     test('changing dates rechecks conflicts when an out-of-range makeup becomes active', () {
+      final first = ClassSchedule(
+        id: 's1',
+        name: 'Term 1',
+        startDate: DateTime(2026, 11, 19),
+        endDate: DateTime(2026, 12, 31),
+      );
+      final second = ClassSchedule(
+        id: 's2',
+        name: 'Evening Classes',
+        startDate: first.startDate,
+        endDate: first.endDate,
+      );
+      first.courseIds.add('c1');
+      second.courseIds.add('c2');
+      final service = TimetableService(
+        schedules: [first, second],
+        courses: [
+          Course(id: 'c1', name: 'Mobile Development'),
+          Course(id: 'c2', name: 'Database Systems'),
+        ],
+      );
+
       first.endDate = DateTime(2026, 11, 20);
       service.addMakeup(
         's1',
-        makeup('m1', DateTime(2026, 11, 23), start: 480, end: 600),
+        ClassSession(
+          id: 'm1',
+          courseId: 'c1',
+          type: ClassSessionType.makeup,
+          date: DateTime(2026, 11, 23),
+          startMinutes: 480,
+          endMinutes: 600,
+        ),
         from: from,
         to: to,
         saveAnyway: true,
       );
-      add(weekly('w2', courseId: 'c2'), scheduleId: 's2');
+      service.addSession(
+        's2',
+        ClassSession(
+          id: 'w2',
+          courseId: 'c2',
+          type: ClassSessionType.weekly,
+          weekday: DateTime.monday,
+          startMinutes: 480,
+          endMinutes: 600,
+          room: 'Room A',
+          preparationNotes: 'Review notes',
+        ),
+        from: from,
+        to: to,
+      );
       expect(service.findConflicts(from, to), isEmpty);
       expect(
         service.previewUpdateSchedule(
@@ -161,19 +178,95 @@ void main() {
     });
 
     test('saving revalidates even after an earlier clean preview', () {
-      final proposed = weekly('w1');
+      final first = ClassSchedule(
+        id: 's1',
+        name: 'Term 1',
+        startDate: DateTime(2026, 11, 19),
+        endDate: DateTime(2026, 12, 31),
+      );
+      final second = ClassSchedule(
+        id: 's2',
+        name: 'Evening Classes',
+        startDate: first.startDate,
+        endDate: first.endDate,
+      );
+      first.courseIds.add('c1');
+      second.courseIds.add('c2');
+      final service = TimetableService(
+        schedules: [first, second],
+        courses: [
+          Course(id: 'c1', name: 'Mobile Development'),
+          Course(id: 'c2', name: 'Database Systems'),
+        ],
+      );
+
+      final proposed = ClassSession(
+        id: 'w1',
+        courseId: 'c1',
+        type: ClassSessionType.weekly,
+        weekday: DateTime.monday,
+        startMinutes: 480,
+        endMinutes: 600,
+        room: 'Room A',
+        preparationNotes: 'Review notes',
+      );
       expect(
         service.previewAddSession('s1', proposed, from: from, to: to),
         isEmpty,
       );
-      add(weekly('w2', courseId: 'c2'), scheduleId: 's2');
-      expect(add(proposed), isFalse);
+      service.addSession(
+        's2',
+        ClassSession(
+          id: 'w2',
+          courseId: 'c2',
+          type: ClassSessionType.weekly,
+          weekday: DateTime.monday,
+          startMinutes: 480,
+          endMinutes: 600,
+          room: 'Room A',
+          preparationNotes: 'Review notes',
+        ),
+        from: from,
+        to: to,
+      );
+      expect(service.addSession('s1', proposed, from: from, to: to), isFalse);
       expect(first.sessions, isEmpty);
-      expect(add(proposed, saveAnyway: true), isTrue);
+      expect(
+        service.addSession(
+          's1',
+          proposed,
+          from: from,
+          to: to,
+          saveAnyway: true,
+        ),
+        isTrue,
+      );
       expect(service.findConflicts(from, to).length, 2);
     });
 
     test('creates empty timetables and validates dates, names and IDs', () {
+      final first = ClassSchedule(
+        id: 's1',
+        name: 'Term 1',
+        startDate: DateTime(2026, 11, 19),
+        endDate: DateTime(2026, 12, 31),
+      );
+      final second = ClassSchedule(
+        id: 's2',
+        name: 'Evening Classes',
+        startDate: first.startDate,
+        endDate: first.endDate,
+      );
+      first.courseIds.add('c1');
+      second.courseIds.add('c2');
+      final service = TimetableService(
+        schedules: [first, second],
+        courses: [
+          Course(id: 'c1', name: 'Mobile Development'),
+          Course(id: 'c2', name: 'Database Systems'),
+        ],
+      );
+
       final schedule = service.addSchedule(
         id: 's3',
         name: 'Term 2',
@@ -210,7 +303,38 @@ void main() {
     test(
       'previews without mutation, supports cancel and generates weekly dates',
       () {
-        final session = weekly('w1');
+        final first = ClassSchedule(
+          id: 's1',
+          name: 'Term 1',
+          startDate: DateTime(2026, 11, 19),
+          endDate: DateTime(2026, 12, 31),
+        );
+        final second = ClassSchedule(
+          id: 's2',
+          name: 'Evening Classes',
+          startDate: first.startDate,
+          endDate: first.endDate,
+        );
+        first.courseIds.add('c1');
+        second.courseIds.add('c2');
+        final service = TimetableService(
+          schedules: [first, second],
+          courses: [
+            Course(id: 'c1', name: 'Mobile Development'),
+            Course(id: 'c2', name: 'Database Systems'),
+          ],
+        );
+
+        final session = ClassSession(
+          id: 'w1',
+          courseId: 'c1',
+          type: ClassSessionType.weekly,
+          weekday: DateTime.monday,
+          startMinutes: 480,
+          endMinutes: 600,
+          room: 'Room A',
+          preparationNotes: 'Review notes',
+        );
         expect(
           service.previewAddSession('s1', session, from: from, to: to),
           isEmpty,
@@ -227,7 +351,7 @@ void main() {
           isFalse,
         );
         expect(first.sessions, isEmpty);
-        expect(add(session), isTrue);
+        expect(service.addSession('s1', session, from: from, to: to), isTrue);
         final occurrences = service.getClassOccurrences('s1', from, to);
         expect(occurrences.map((item) => item.start), [
           DateTime(2026, 11, 23, 8),
@@ -241,29 +365,168 @@ void main() {
     );
 
     test('invalid sessions throw without adding anything', () {
+      final first = ClassSchedule(
+        id: 's1',
+        name: 'Term 1',
+        startDate: DateTime(2026, 11, 19),
+        endDate: DateTime(2026, 12, 31),
+      );
+      final second = ClassSchedule(
+        id: 's2',
+        name: 'Evening Classes',
+        startDate: first.startDate,
+        endDate: first.endDate,
+      );
+      first.courseIds.add('c1');
+      second.courseIds.add('c2');
+      final service = TimetableService(
+        schedules: [first, second],
+        courses: [
+          Course(id: 'c1', name: 'Mobile Development'),
+          Course(id: 'c2', name: 'Database Systems'),
+        ],
+      );
+
       for (final session in [
-        weekly(''),
-        weekly('x', courseId: 'missing'),
-        weekly('x', courseId: 'c2'),
-        weekly('x', weekday: 0),
-        weekly('x', weekday: 8),
-        weekly('x', start: -1),
-        weekly('x', end: 1441),
-        weekly('x', start: 600, end: 600),
-        weekly('x', start: 600, end: 500),
+        ClassSession(
+          id: '',
+          courseId: 'c1',
+          type: ClassSessionType.weekly,
+          weekday: DateTime.monday,
+          startMinutes: 480,
+          endMinutes: 600,
+          room: 'Room A',
+          preparationNotes: 'Review notes',
+        ),
+        ClassSession(
+          id: 'x',
+          courseId: 'missing',
+          type: ClassSessionType.weekly,
+          weekday: DateTime.monday,
+          startMinutes: 480,
+          endMinutes: 600,
+          room: 'Room A',
+          preparationNotes: 'Review notes',
+        ),
+        ClassSession(
+          id: 'x',
+          courseId: 'c2',
+          type: ClassSessionType.weekly,
+          weekday: DateTime.monday,
+          startMinutes: 480,
+          endMinutes: 600,
+          room: 'Room A',
+          preparationNotes: 'Review notes',
+        ),
+        ClassSession(
+          id: 'x',
+          courseId: 'c1',
+          type: ClassSessionType.weekly,
+          weekday: 0,
+          startMinutes: 480,
+          endMinutes: 600,
+          room: 'Room A',
+          preparationNotes: 'Review notes',
+        ),
+        ClassSession(
+          id: 'x',
+          courseId: 'c1',
+          type: ClassSessionType.weekly,
+          weekday: 8,
+          startMinutes: 480,
+          endMinutes: 600,
+          room: 'Room A',
+          preparationNotes: 'Review notes',
+        ),
+        ClassSession(
+          id: 'x',
+          courseId: 'c1',
+          type: ClassSessionType.weekly,
+          weekday: DateTime.monday,
+          startMinutes: -1,
+          endMinutes: 600,
+          room: 'Room A',
+          preparationNotes: 'Review notes',
+        ),
+        ClassSession(
+          id: 'x',
+          courseId: 'c1',
+          type: ClassSessionType.weekly,
+          weekday: DateTime.monday,
+          startMinutes: 480,
+          endMinutes: 1441,
+          room: 'Room A',
+          preparationNotes: 'Review notes',
+        ),
+        ClassSession(
+          id: 'x',
+          courseId: 'c1',
+          type: ClassSessionType.weekly,
+          weekday: DateTime.monday,
+          startMinutes: 600,
+          endMinutes: 600,
+          room: 'Room A',
+          preparationNotes: 'Review notes',
+        ),
+        ClassSession(
+          id: 'x',
+          courseId: 'c1',
+          type: ClassSessionType.weekly,
+          weekday: DateTime.monday,
+          startMinutes: 600,
+          endMinutes: 500,
+          room: 'Room A',
+          preparationNotes: 'Review notes',
+        ),
       ]) {
-        expect(() => add(session), throwsException);
+        expect(
+          () => service.addSession('s1', session, from: from, to: to),
+          throwsException,
+        );
       }
-      final inconsistent = weekly('w1');
+      final inconsistent = ClassSession(
+        id: 'w1',
+        courseId: 'c1',
+        type: ClassSessionType.weekly,
+        weekday: DateTime.monday,
+        startMinutes: 480,
+        endMinutes: 600,
+        room: 'Room A',
+        preparationNotes: 'Review notes',
+      );
       inconsistent.date = from;
-      expect(() => add(inconsistent), throwsException);
-      final noWeekday = weekly('w1');
+      expect(
+        () => service.addSession('s1', inconsistent, from: from, to: to),
+        throwsException,
+      );
+      final noWeekday = ClassSession(
+        id: 'w1',
+        courseId: 'c1',
+        type: ClassSessionType.weekly,
+        weekday: DateTime.monday,
+        startMinutes: 480,
+        endMinutes: 600,
+        room: 'Room A',
+        preparationNotes: 'Review notes',
+      );
       noWeekday.weekday = null;
-      expect(() => add(noWeekday), throwsException);
+      expect(
+        () => service.addSession('s1', noWeekday, from: from, to: to),
+        throwsException,
+      );
       expect(
         () => service.previewAddSession(
           'missing',
-          weekly('w1'),
+          ClassSession(
+            id: 'w1',
+            courseId: 'c1',
+            type: ClassSessionType.weekly,
+            weekday: DateTime.monday,
+            startMinutes: 480,
+            endMinutes: 600,
+            room: 'Room A',
+            preparationNotes: 'Review notes',
+          ),
           from: from,
           to: to,
         ),
@@ -275,14 +538,98 @@ void main() {
     test(
       'duplicate session IDs and duplicate course ownership are rejected',
       () {
-        add(weekly('w1'));
-        expect(() => add(weekly('w1')), throwsException);
+        final first = ClassSchedule(
+          id: 's1',
+          name: 'Term 1',
+          startDate: DateTime(2026, 11, 19),
+          endDate: DateTime(2026, 12, 31),
+        );
+        final second = ClassSchedule(
+          id: 's2',
+          name: 'Evening Classes',
+          startDate: first.startDate,
+          endDate: first.endDate,
+        );
+        first.courseIds.add('c1');
+        second.courseIds.add('c2');
+        final service = TimetableService(
+          schedules: [first, second],
+          courses: [
+            Course(id: 'c1', name: 'Mobile Development'),
+            Course(id: 'c2', name: 'Database Systems'),
+          ],
+        );
+
+        service.addSession(
+          's1',
+          ClassSession(
+            id: 'w1',
+            courseId: 'c1',
+            type: ClassSessionType.weekly,
+            weekday: DateTime.monday,
+            startMinutes: 480,
+            endMinutes: 600,
+            room: 'Room A',
+            preparationNotes: 'Review notes',
+          ),
+          from: from,
+          to: to,
+        );
         expect(
-          () => add(weekly('w1', courseId: 'c2'), scheduleId: 's2'),
+          () => service.addSession(
+            's1',
+            ClassSession(
+              id: 'w1',
+              courseId: 'c1',
+              type: ClassSessionType.weekly,
+              weekday: DateTime.monday,
+              startMinutes: 480,
+              endMinutes: 600,
+              room: 'Room A',
+              preparationNotes: 'Review notes',
+            ),
+            from: from,
+            to: to,
+          ),
+          throwsException,
+        );
+        expect(
+          () => service.addSession(
+            's2',
+            ClassSession(
+              id: 'w1',
+              courseId: 'c2',
+              type: ClassSessionType.weekly,
+              weekday: DateTime.monday,
+              startMinutes: 480,
+              endMinutes: 600,
+              room: 'Room A',
+              preparationNotes: 'Review notes',
+            ),
+            from: from,
+            to: to,
+          ),
           throwsException,
         );
         second.courseIds.add('c1');
-        expect(() => add(weekly('w2')), throwsException);
+        expect(
+          () => service.addSession(
+            's1',
+            ClassSession(
+              id: 'w2',
+              courseId: 'c1',
+              type: ClassSessionType.weekly,
+              weekday: DateTime.monday,
+              startMinutes: 480,
+              endMinutes: 600,
+              room: 'Room A',
+              preparationNotes: 'Review notes',
+            ),
+            from: from,
+            to: to,
+          ),
+          throwsException,
+        );
         expect(first.sessions.length, 1);
         expect(second.sessions, isEmpty);
       },
@@ -291,8 +638,44 @@ void main() {
     test(
       'queries respect schedule dates, exact query boundaries and midnight end',
       () {
+        final first = ClassSchedule(
+          id: 's1',
+          name: 'Term 1',
+          startDate: DateTime(2026, 11, 19),
+          endDate: DateTime(2026, 12, 31),
+        );
+        final second = ClassSchedule(
+          id: 's2',
+          name: 'Evening Classes',
+          startDate: first.startDate,
+          endDate: first.endDate,
+        );
+        first.courseIds.add('c1');
+        second.courseIds.add('c2');
+        final service = TimetableService(
+          schedules: [first, second],
+          courses: [
+            Course(id: 'c1', name: 'Mobile Development'),
+            Course(id: 'c2', name: 'Database Systems'),
+          ],
+        );
+
         first.endDate = DateTime(2026, 11, 23);
-        add(weekly('w1', start: 0, end: 1440));
+        service.addSession(
+          's1',
+          ClassSession(
+            id: 'w1',
+            courseId: 'c1',
+            type: ClassSessionType.weekly,
+            weekday: DateTime.monday,
+            startMinutes: 0,
+            endMinutes: 1440,
+            room: 'Room A',
+            preparationNotes: 'Review notes',
+          ),
+          from: from,
+          to: to,
+        );
         expect(
           service.getClassOccurrences('s1', from, DateTime(2026, 11, 23)),
           isEmpty,
@@ -320,22 +703,67 @@ void main() {
     test(
       'makeup is extra and can be edited without changing the weekly class',
       () {
-        add(weekly('w1'));
+        final first = ClassSchedule(
+          id: 's1',
+          name: 'Term 1',
+          startDate: DateTime(2026, 11, 19),
+          endDate: DateTime(2026, 12, 31),
+        );
+        final second = ClassSchedule(
+          id: 's2',
+          name: 'Evening Classes',
+          startDate: first.startDate,
+          endDate: first.endDate,
+        );
+        first.courseIds.add('c1');
+        second.courseIds.add('c2');
+        final service = TimetableService(
+          schedules: [first, second],
+          courses: [
+            Course(id: 'c1', name: 'Mobile Development'),
+            Course(id: 'c2', name: 'Database Systems'),
+          ],
+        );
+
+        service.addSession(
+          's1',
+          ClassSession(
+            id: 'w1',
+            courseId: 'c1',
+            type: ClassSessionType.weekly,
+            weekday: DateTime.monday,
+            startMinutes: 480,
+            endMinutes: 600,
+            room: 'Room A',
+            preparationNotes: 'Review notes',
+          ),
+          from: from,
+          to: to,
+        );
         expect(
           service.addMakeup(
             's1',
-            makeup('m1', DateTime(2026, 11, 21)),
+            ClassSession(
+              id: 'm1',
+              courseId: 'c1',
+              type: ClassSessionType.makeup,
+              date: DateTime(2026, 11, 21),
+              startMinutes: 600,
+              endMinutes: 660,
+            ),
             from: from,
             to: to,
           ),
           isTrue,
         );
         expect(service.getClassOccurrences('s1', from, to).length, 3);
-        final changed = makeup(
-          'm1',
-          DateTime(2026, 11, 22),
-          start: 660,
-          end: 720,
+        final changed = ClassSession(
+          id: 'm1',
+          courseId: 'c1',
+          type: ClassSessionType.makeup,
+          date: DateTime(2026, 11, 22),
+          startMinutes: 660,
+          endMinutes: 720,
         );
         changed.preparationNotes = 'Practice widgets';
         expect(
@@ -359,14 +787,49 @@ void main() {
         expect(first.sessions.last.date, DateTime(2026, 11, 22));
         expect(first.sessions.first.weekday, DateTime.monday);
         expect(
-          () => service.addMakeup('s1', weekly('w2'), from: from, to: to),
+          () => service.addMakeup(
+            's1',
+            ClassSession(
+              id: 'w2',
+              courseId: 'c1',
+              type: ClassSessionType.weekly,
+              weekday: DateTime.monday,
+              startMinutes: 480,
+              endMinutes: 600,
+              room: 'Room A',
+              preparationNotes: 'Review notes',
+            ),
+            from: from,
+            to: to,
+          ),
           throwsException,
         );
         expect(
-          () => service.updateMakeup('s1', weekly('m1'), from: from, to: to),
+          () => service.updateMakeup(
+            's1',
+            ClassSession(
+              id: 'm1',
+              courseId: 'c1',
+              type: ClassSessionType.weekly,
+              weekday: DateTime.monday,
+              startMinutes: 480,
+              endMinutes: 600,
+              room: 'Room A',
+              preparationNotes: 'Review notes',
+            ),
+            from: from,
+            to: to,
+          ),
           throwsException,
         );
-        final invalid = makeup('m1', from, start: 700, end: 600);
+        final invalid = ClassSession(
+          id: 'm1',
+          courseId: 'c1',
+          type: ClassSessionType.makeup,
+          date: from,
+          startMinutes: 700,
+          endMinutes: 600,
+        );
         expect(
           () => service.updateMakeup('s1', invalid, from: from, to: to),
           throwsException,
@@ -376,13 +839,63 @@ void main() {
     );
 
     test('invalid makeup fields do not add records', () {
-      final missingDate = makeup('m1', from);
+      final first = ClassSchedule(
+        id: 's1',
+        name: 'Term 1',
+        startDate: DateTime(2026, 11, 19),
+        endDate: DateTime(2026, 12, 31),
+      );
+      final second = ClassSchedule(
+        id: 's2',
+        name: 'Evening Classes',
+        startDate: first.startDate,
+        endDate: first.endDate,
+      );
+      first.courseIds.add('c1');
+      second.courseIds.add('c2');
+      final service = TimetableService(
+        schedules: [first, second],
+        courses: [
+          Course(id: 'c1', name: 'Mobile Development'),
+          Course(id: 'c2', name: 'Database Systems'),
+        ],
+      );
+
+      final missingDate = ClassSession(
+        id: 'm1',
+        courseId: 'c1',
+        type: ClassSessionType.makeup,
+        date: from,
+        startMinutes: 600,
+        endMinutes: 660,
+      );
       missingDate.date = null;
-      final withWeekday = makeup('m2', from);
+      final withWeekday = ClassSession(
+        id: 'm2',
+        courseId: 'c1',
+        type: ClassSessionType.makeup,
+        date: from,
+        startMinutes: 600,
+        endMinutes: 660,
+      );
       withWeekday.weekday = DateTime.monday;
-      final withUnavailable = makeup('m3', from);
+      final withUnavailable = ClassSession(
+        id: 'm3',
+        courseId: 'c1',
+        type: ClassSessionType.makeup,
+        date: from,
+        startMinutes: 600,
+        endMinutes: 660,
+      );
       withUnavailable.unavailableDates[from] = 'Unavailable';
-      final withEnd = makeup('m4', from);
+      final withEnd = ClassSession(
+        id: 'm4',
+        courseId: 'c1',
+        type: ClassSessionType.makeup,
+        date: from,
+        startMinutes: 600,
+        endMinutes: 660,
+      );
       withEnd.recurrenceEndDate = to;
       for (final session in [
         missingDate,
@@ -390,14 +903,46 @@ void main() {
         withUnavailable,
         withEnd,
       ]) {
-        expect(() => add(session), throwsException);
+        expect(
+          () => service.addSession('s1', session, from: from, to: to),
+          throwsException,
+        );
       }
       expect(first.sessions, isEmpty);
     });
 
     test('out-of-range makeup warns, requires acceptance and becomes active after range edit', () {
+      final first = ClassSchedule(
+        id: 's1',
+        name: 'Term 1',
+        startDate: DateTime(2026, 11, 19),
+        endDate: DateTime(2026, 12, 31),
+      );
+      final second = ClassSchedule(
+        id: 's2',
+        name: 'Evening Classes',
+        startDate: first.startDate,
+        endDate: first.endDate,
+      );
+      first.courseIds.add('c1');
+      second.courseIds.add('c2');
+      final service = TimetableService(
+        schedules: [first, second],
+        courses: [
+          Course(id: 'c1', name: 'Mobile Development'),
+          Course(id: 'c2', name: 'Database Systems'),
+        ],
+      );
+
       first.endDate = DateTime(2026, 11, 20);
-      final session = makeup('m1', DateTime(2026, 11, 21));
+      final session = ClassSession(
+        id: 'm1',
+        courseId: 'c1',
+        type: ClassSessionType.makeup,
+        date: DateTime(2026, 11, 21),
+        startMinutes: 600,
+        endMinutes: 660,
+      );
       expect(
         service.previewAddSession('s1', session, from: from, to: to),
         isNotEmpty,
@@ -464,7 +1009,43 @@ void main() {
     });
 
     test('unavailable dates retain reasons and notes, omit active class, and can restore', () {
-      add(weekly('w1'));
+      final first = ClassSchedule(
+        id: 's1',
+        name: 'Term 1',
+        startDate: DateTime(2026, 11, 19),
+        endDate: DateTime(2026, 12, 31),
+      );
+      final second = ClassSchedule(
+        id: 's2',
+        name: 'Evening Classes',
+        startDate: first.startDate,
+        endDate: first.endDate,
+      );
+      first.courseIds.add('c1');
+      second.courseIds.add('c2');
+      final service = TimetableService(
+        schedules: [first, second],
+        courses: [
+          Course(id: 'c1', name: 'Mobile Development'),
+          Course(id: 'c2', name: 'Database Systems'),
+        ],
+      );
+
+      service.addSession(
+        's1',
+        ClassSession(
+          id: 'w1',
+          courseId: 'c1',
+          type: ClassSessionType.weekly,
+          weekday: DateTime.monday,
+          startMinutes: 480,
+          endMinutes: 600,
+          room: 'Room A',
+          preparationNotes: 'Review notes',
+        ),
+        from: from,
+        to: to,
+      );
       final day = DateTime(2026, 11, 23);
       service.markUnavailable('s1', 'w1', day, reason: 'Lecturer unavailable');
       expect(service.getClassOccurrences('s1', from, to).length, 1);
@@ -505,15 +1086,72 @@ void main() {
     test(
       'cross-timetable conflicts warn and Save Anyway keeps both occurrences',
       () {
-        add(weekly('w1'));
-        final conflicting = weekly('w2', courseId: 'c2', start: 540, end: 660);
+        final first = ClassSchedule(
+          id: 's1',
+          name: 'Term 1',
+          startDate: DateTime(2026, 11, 19),
+          endDate: DateTime(2026, 12, 31),
+        );
+        final second = ClassSchedule(
+          id: 's2',
+          name: 'Evening Classes',
+          startDate: first.startDate,
+          endDate: first.endDate,
+        );
+        first.courseIds.add('c1');
+        second.courseIds.add('c2');
+        final service = TimetableService(
+          schedules: [first, second],
+          courses: [
+            Course(id: 'c1', name: 'Mobile Development'),
+            Course(id: 'c2', name: 'Database Systems'),
+          ],
+        );
+
+        service.addSession(
+          's1',
+          ClassSession(
+            id: 'w1',
+            courseId: 'c1',
+            type: ClassSessionType.weekly,
+            weekday: DateTime.monday,
+            startMinutes: 480,
+            endMinutes: 600,
+            room: 'Room A',
+            preparationNotes: 'Review notes',
+          ),
+          from: from,
+          to: to,
+        );
+        final conflicting = ClassSession(
+          id: 'w2',
+          courseId: 'c2',
+          type: ClassSessionType.weekly,
+          weekday: DateTime.monday,
+          startMinutes: 540,
+          endMinutes: 660,
+          room: 'Room A',
+          preparationNotes: 'Review notes',
+        );
         expect(
           service.previewAddSession('s2', conflicting, from: from, to: to),
           isNotEmpty,
         );
-        expect(add(conflicting, scheduleId: 's2'), isFalse);
+        expect(
+          service.addSession('s2', conflicting, from: from, to: to),
+          isFalse,
+        );
         expect(second.sessions, isEmpty);
-        expect(add(conflicting, scheduleId: 's2', saveAnyway: true), isTrue);
+        expect(
+          service.addSession(
+            's2',
+            conflicting,
+            from: from,
+            to: to,
+            saveAnyway: true,
+          ),
+          isTrue,
+        );
         final pairs = service.findConflicts(from, to);
         expect(pairs.length, 2);
         expect(pairs.first.map((item) => item.sessionId).toSet(), {'w1', 'w2'});
@@ -523,20 +1161,69 @@ void main() {
     );
 
     test('touching classes are allowed and makeup conflicts are detected', () {
-      add(weekly('w1'));
+      final first = ClassSchedule(
+        id: 's1',
+        name: 'Term 1',
+        startDate: DateTime(2026, 11, 19),
+        endDate: DateTime(2026, 12, 31),
+      );
+      final second = ClassSchedule(
+        id: 's2',
+        name: 'Evening Classes',
+        startDate: first.startDate,
+        endDate: first.endDate,
+      );
+      first.courseIds.add('c1');
+      second.courseIds.add('c2');
+      final service = TimetableService(
+        schedules: [first, second],
+        courses: [
+          Course(id: 'c1', name: 'Mobile Development'),
+          Course(id: 'c2', name: 'Database Systems'),
+        ],
+      );
+
+      service.addSession(
+        's1',
+        ClassSession(
+          id: 'w1',
+          courseId: 'c1',
+          type: ClassSessionType.weekly,
+          weekday: DateTime.monday,
+          startMinutes: 480,
+          endMinutes: 600,
+          room: 'Room A',
+          preparationNotes: 'Review notes',
+        ),
+        from: from,
+        to: to,
+      );
       expect(
-        add(
-          weekly('w2', courseId: 'c2', start: 600, end: 660),
-          scheduleId: 's2',
+        service.addSession(
+          's2',
+          ClassSession(
+            id: 'w2',
+            courseId: 'c2',
+            type: ClassSessionType.weekly,
+            weekday: DateTime.monday,
+            startMinutes: 600,
+            endMinutes: 660,
+            room: 'Room A',
+            preparationNotes: 'Review notes',
+          ),
+          from: from,
+          to: to,
         ),
         isTrue,
       );
       expect(service.findConflicts(from, to), isEmpty);
-      final session = makeup(
-        'm1',
-        DateTime(2026, 11, 23),
-        start: 570,
-        end: 630,
+      final session = ClassSession(
+        id: 'm1',
+        courseId: 'c1',
+        type: ClassSessionType.makeup,
+        date: DateTime(2026, 11, 23),
+        startMinutes: 570,
+        endMinutes: 630,
       );
       expect(service.addMakeup('s1', session, from: from, to: to), isFalse);
       expect(
@@ -549,7 +1236,43 @@ void main() {
     test(
       'restoring an unavailable class rechecks conflicts before changing data',
       () {
-        add(weekly('w1'));
+        final first = ClassSchedule(
+          id: 's1',
+          name: 'Term 1',
+          startDate: DateTime(2026, 11, 19),
+          endDate: DateTime(2026, 12, 31),
+        );
+        final second = ClassSchedule(
+          id: 's2',
+          name: 'Evening Classes',
+          startDate: first.startDate,
+          endDate: first.endDate,
+        );
+        first.courseIds.add('c1');
+        second.courseIds.add('c2');
+        final service = TimetableService(
+          schedules: [first, second],
+          courses: [
+            Course(id: 'c1', name: 'Mobile Development'),
+            Course(id: 'c2', name: 'Database Systems'),
+          ],
+        );
+
+        service.addSession(
+          's1',
+          ClassSession(
+            id: 'w1',
+            courseId: 'c1',
+            type: ClassSessionType.weekly,
+            weekday: DateTime.monday,
+            startMinutes: 480,
+            endMinutes: 600,
+            room: 'Room A',
+            preparationNotes: 'Review notes',
+          ),
+          from: from,
+          to: to,
+        );
         final day = DateTime(2026, 11, 23);
         service.markUnavailable('s1', 'w1', day);
         final other = ClassSession(
@@ -560,7 +1283,7 @@ void main() {
           startMinutes: 480,
           endMinutes: 600,
         );
-        expect(add(other, scheduleId: 's2'), isTrue);
+        expect(service.addSession('s2', other, from: from, to: to), isTrue);
         expect(service.findConflicts(from, to), isEmpty);
         expect(service.previewRestoreUnavailable('s1', 'w1', day), isNotEmpty);
         expect(service.restoreUnavailable('s1', 'w1', day), isFalse);
@@ -574,15 +1297,55 @@ void main() {
     );
 
     test('weekly edits preserve identity and require explicit clearing of mismatched dates', () {
-      add(weekly('w1'));
+      final first = ClassSchedule(
+        id: 's1',
+        name: 'Term 1',
+        startDate: DateTime(2026, 11, 19),
+        endDate: DateTime(2026, 12, 31),
+      );
+      final second = ClassSchedule(
+        id: 's2',
+        name: 'Evening Classes',
+        startDate: first.startDate,
+        endDate: first.endDate,
+      );
+      first.courseIds.add('c1');
+      second.courseIds.add('c2');
+      final service = TimetableService(
+        schedules: [first, second],
+        courses: [
+          Course(id: 'c1', name: 'Mobile Development'),
+          Course(id: 'c2', name: 'Database Systems'),
+        ],
+      );
+
+      service.addSession(
+        's1',
+        ClassSession(
+          id: 'w1',
+          courseId: 'c1',
+          type: ClassSessionType.weekly,
+          weekday: DateTime.monday,
+          startMinutes: 480,
+          endMinutes: 600,
+          room: 'Room A',
+          preparationNotes: 'Review notes',
+        ),
+        from: from,
+        to: to,
+      );
       final current = first.sessions.single;
       final day = DateTime(2026, 11, 23);
       service.markUnavailable('s1', 'w1', day, reason: 'Unavailable');
-      final changed = weekly(
-        'w1',
+      final changed = ClassSession(
+        id: 'w1',
+        courseId: 'c1',
+        type: ClassSessionType.weekly,
         weekday: DateTime.tuesday,
-        start: 600,
-        end: 660,
+        startMinutes: 600,
+        endMinutes: 660,
+        room: 'Room A',
+        preparationNotes: 'Review notes',
       );
       changed.room = 'Room B';
       expect(
@@ -623,12 +1386,68 @@ void main() {
     });
 
     test('weekly edit validates input and overlaps before applying fields', () {
-      add(weekly('w1'));
-      add(
-        weekly('w2', courseId: 'c2', weekday: DateTime.tuesday),
-        scheduleId: 's2',
+      final first = ClassSchedule(
+        id: 's1',
+        name: 'Term 1',
+        startDate: DateTime(2026, 11, 19),
+        endDate: DateTime(2026, 12, 31),
       );
-      final changed = weekly('w1', weekday: DateTime.tuesday);
+      final second = ClassSchedule(
+        id: 's2',
+        name: 'Evening Classes',
+        startDate: first.startDate,
+        endDate: first.endDate,
+      );
+      first.courseIds.add('c1');
+      second.courseIds.add('c2');
+      final service = TimetableService(
+        schedules: [first, second],
+        courses: [
+          Course(id: 'c1', name: 'Mobile Development'),
+          Course(id: 'c2', name: 'Database Systems'),
+        ],
+      );
+
+      service.addSession(
+        's1',
+        ClassSession(
+          id: 'w1',
+          courseId: 'c1',
+          type: ClassSessionType.weekly,
+          weekday: DateTime.monday,
+          startMinutes: 480,
+          endMinutes: 600,
+          room: 'Room A',
+          preparationNotes: 'Review notes',
+        ),
+        from: from,
+        to: to,
+      );
+      service.addSession(
+        's2',
+        ClassSession(
+          id: 'w2',
+          courseId: 'c2',
+          type: ClassSessionType.weekly,
+          weekday: DateTime.tuesday,
+          startMinutes: 480,
+          endMinutes: 600,
+          room: 'Room A',
+          preparationNotes: 'Review notes',
+        ),
+        from: from,
+        to: to,
+      );
+      final changed = ClassSession(
+        id: 'w1',
+        courseId: 'c1',
+        type: ClassSessionType.weekly,
+        weekday: DateTime.tuesday,
+        startMinutes: 480,
+        endMinutes: 600,
+        room: 'Room A',
+        preparationNotes: 'Review notes',
+      );
       expect(
         service.updateWeeklySession('s1', changed, from: from, to: to),
         isFalse,
@@ -648,7 +1467,16 @@ void main() {
       expect(
         () => service.updateWeeklySession(
           's1',
-          weekly('w1', end: 400),
+          ClassSession(
+            id: 'w1',
+            courseId: 'c1',
+            type: ClassSessionType.weekly,
+            weekday: DateTime.monday,
+            startMinutes: 480,
+            endMinutes: 400,
+            room: 'Room A',
+            preparationNotes: 'Review notes',
+          ),
           from: from,
           to: to,
         ),
@@ -657,7 +1485,16 @@ void main() {
       expect(
         () => service.updateWeeklySession(
           's1',
-          weekly('missing'),
+          ClassSession(
+            id: 'missing',
+            courseId: 'c1',
+            type: ClassSessionType.weekly,
+            weekday: DateTime.monday,
+            startMinutes: 480,
+            endMinutes: 600,
+            room: 'Room A',
+            preparationNotes: 'Review notes',
+          ),
           from: from,
           to: to,
         ),
@@ -666,15 +1503,33 @@ void main() {
       expect(
         () => service.updateWeeklySession(
           's1',
-          makeup('w1', from),
+          ClassSession(
+            id: 'w1',
+            courseId: 'c1',
+            type: ClassSessionType.makeup,
+            date: from,
+            startMinutes: 600,
+            endMinutes: 660,
+          ),
           from: from,
           to: to,
         ),
         throwsException,
       );
       expect(
-        () =>
-            service.updateMakeup('s1', makeup('w1', from), from: from, to: to),
+        () => service.updateMakeup(
+          's1',
+          ClassSession(
+            id: 'w1',
+            courseId: 'c1',
+            type: ClassSessionType.makeup,
+            date: from,
+            startMinutes: 600,
+            endMinutes: 660,
+          ),
+          from: from,
+          to: to,
+        ),
         throwsException,
       );
       expect(first.sessions.single.weekday, DateTime.tuesday);
@@ -683,10 +1538,53 @@ void main() {
     test(
       'ending weekly recurrence is exclusive and preserves dated makeups',
       () {
-        add(weekly('w1'));
+        final first = ClassSchedule(
+          id: 's1',
+          name: 'Term 1',
+          startDate: DateTime(2026, 11, 19),
+          endDate: DateTime(2026, 12, 31),
+        );
+        final second = ClassSchedule(
+          id: 's2',
+          name: 'Evening Classes',
+          startDate: first.startDate,
+          endDate: first.endDate,
+        );
+        first.courseIds.add('c1');
+        second.courseIds.add('c2');
+        final service = TimetableService(
+          schedules: [first, second],
+          courses: [
+            Course(id: 'c1', name: 'Mobile Development'),
+            Course(id: 'c2', name: 'Database Systems'),
+          ],
+        );
+
+        service.addSession(
+          's1',
+          ClassSession(
+            id: 'w1',
+            courseId: 'c1',
+            type: ClassSessionType.weekly,
+            weekday: DateTime.monday,
+            startMinutes: 480,
+            endMinutes: 600,
+            room: 'Room A',
+            preparationNotes: 'Review notes',
+          ),
+          from: from,
+          to: to,
+        );
         service.addMakeup(
           's1',
-          makeup('m1', DateTime(2026, 11, 30)),
+          ClassSession(
+            id: 'm1',
+            courseId: 'c1',
+            type: ClassSessionType.makeup,
+            date: DateTime(2026, 11, 30),
+            startMinutes: 600,
+            endMinutes: 660,
+          ),
           from: from,
           to: to,
         );
@@ -719,10 +1617,53 @@ void main() {
     );
 
     test('session deletion needs confirmation and preserves the course and other sessions', () {
-      add(weekly('w1'));
+      final first = ClassSchedule(
+        id: 's1',
+        name: 'Term 1',
+        startDate: DateTime(2026, 11, 19),
+        endDate: DateTime(2026, 12, 31),
+      );
+      final second = ClassSchedule(
+        id: 's2',
+        name: 'Evening Classes',
+        startDate: first.startDate,
+        endDate: first.endDate,
+      );
+      first.courseIds.add('c1');
+      second.courseIds.add('c2');
+      final service = TimetableService(
+        schedules: [first, second],
+        courses: [
+          Course(id: 'c1', name: 'Mobile Development'),
+          Course(id: 'c2', name: 'Database Systems'),
+        ],
+      );
+
+      service.addSession(
+        's1',
+        ClassSession(
+          id: 'w1',
+          courseId: 'c1',
+          type: ClassSessionType.weekly,
+          weekday: DateTime.monday,
+          startMinutes: 480,
+          endMinutes: 600,
+          room: 'Room A',
+          preparationNotes: 'Review notes',
+        ),
+        from: from,
+        to: to,
+      );
       service.addMakeup(
         's1',
-        makeup('m1', DateTime(2026, 11, 21)),
+        ClassSession(
+          id: 'm1',
+          courseId: 'c1',
+          type: ClassSessionType.makeup,
+          date: DateTime(2026, 11, 21),
+          startMinutes: 600,
+          endMinutes: 660,
+        ),
         from: from,
         to: to,
       );
@@ -743,6 +1684,28 @@ void main() {
     });
 
     test('invalid timetable edits do not partially change data', () {
+      final first = ClassSchedule(
+        id: 's1',
+        name: 'Term 1',
+        startDate: DateTime(2026, 11, 19),
+        endDate: DateTime(2026, 12, 31),
+      );
+      final second = ClassSchedule(
+        id: 's2',
+        name: 'Evening Classes',
+        startDate: first.startDate,
+        endDate: first.endDate,
+      );
+      first.courseIds.add('c1');
+      second.courseIds.add('c2');
+      final service = TimetableService(
+        schedules: [first, second],
+        courses: [
+          Course(id: 'c1', name: 'Mobile Development'),
+          Course(id: 'c2', name: 'Database Systems'),
+        ],
+      );
+
       expect(
         service.updateSchedule(
           's1',

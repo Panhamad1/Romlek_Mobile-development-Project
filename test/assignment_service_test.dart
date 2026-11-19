@@ -4,31 +4,23 @@ import 'package:romlek/model/course.dart';
 import 'package:romlek/service/assignment_service.dart';
 
 void main() {
-  late AssignmentService service;
   final now = DateTime(2026, 11, 19, 10);
-
-  setUp(() {
-    service = AssignmentService(
-      courses: [
-        Course(id: 'c1', name: 'Mobile Development'),
-        Course(id: 'c2', name: 'Database Systems'),
-      ],
-      assignments: [],
-    );
-  });
-
-  Assignment add({DateTime? due}) {
-    return service.addAssignment(
-      id: 'a1',
-      courseId: 'c1',
-      title: 'Flutter Homework',
-      dueDateTime: due,
-    );
-  }
 
   group('AssignmentService', () {
     test('adds pending assignments with optional or past deadlines', () {
-      final assignment = add();
+      final service = AssignmentService(
+        courses: [
+          Course(id: 'c1', name: 'Mobile Development'),
+          Course(id: 'c2', name: 'Database Systems'),
+        ],
+        assignments: [],
+      );
+
+      final assignment = service.addAssignment(
+        id: 'a1',
+        courseId: 'c1',
+        title: 'Flutter Homework',
+      );
       expect(assignment.status, AssignmentStatus.pending);
       expect(assignment.completedAt, isNull);
       expect(service.getDeadlineStatus('a1', now), DeadlineStatus.noDeadline);
@@ -42,6 +34,14 @@ void main() {
     });
 
     test('invalid additions do not change data', () {
+      final service = AssignmentService(
+        courses: [
+          Course(id: 'c1', name: 'Mobile Development'),
+          Course(id: 'c2', name: 'Database Systems'),
+        ],
+        assignments: [],
+      );
+
       expect(
         () => service.addAssignment(id: '', courseId: 'c1', title: 'Homework'),
         throwsException,
@@ -59,15 +59,39 @@ void main() {
         throwsException,
       );
       expect(service.assignments, isEmpty);
-      final assignment = add();
-      expect(() => add(), throwsException);
+      final assignment = service.addAssignment(
+        id: 'a1',
+        courseId: 'c1',
+        title: 'Flutter Homework',
+      );
+      expect(
+        () => service.addAssignment(
+          id: 'a1',
+          courseId: 'c1',
+          title: 'Flutter Homework',
+        ),
+        throwsException,
+      );
       expect(service.assignments, [assignment]);
     });
 
     test(
       'complete, repeat complete, reopen and complete again follow timestamps',
       () {
-        final assignment = add(due: now.subtract(const Duration(hours: 1)));
+        final service = AssignmentService(
+          courses: [
+            Course(id: 'c1', name: 'Mobile Development'),
+            Course(id: 'c2', name: 'Database Systems'),
+          ],
+          assignments: [],
+        );
+
+        final assignment = service.addAssignment(
+          id: 'a1',
+          courseId: 'c1',
+          title: 'Flutter Homework',
+          dueDateTime: now.subtract(const Duration(hours: 1)),
+        );
         service.markCompleted('a1', now);
         service.markCompleted('a1', now.add(const Duration(minutes: 1)));
         expect(assignment.completedAt, now);
@@ -84,7 +108,20 @@ void main() {
     );
 
     test('editing preserves completion and can clear optional fields', () {
-      final assignment = add(due: now);
+      final service = AssignmentService(
+        courses: [
+          Course(id: 'c1', name: 'Mobile Development'),
+          Course(id: 'c2', name: 'Database Systems'),
+        ],
+        assignments: [],
+      );
+
+      final assignment = service.addAssignment(
+        id: 'a1',
+        courseId: 'c1',
+        title: 'Flutter Homework',
+        dueDateTime: now,
+      );
       service.markCompleted('a1', now);
       service.updateAssignment(
         'a1',
@@ -105,7 +142,20 @@ void main() {
     });
 
     test('invalid edits preserve all original fields', () {
-      final assignment = add(due: now);
+      final service = AssignmentService(
+        courses: [
+          Course(id: 'c1', name: 'Mobile Development'),
+          Course(id: 'c2', name: 'Database Systems'),
+        ],
+        assignments: [],
+      );
+
+      final assignment = service.addAssignment(
+        id: 'a1',
+        courseId: 'c1',
+        title: 'Flutter Homework',
+        dueDateTime: now,
+      );
       expect(
         () => service.updateAssignment(
           'a1',
@@ -124,7 +174,20 @@ void main() {
     });
 
     test('deadline classification handles exact instant, today and future', () {
-      add(due: now);
+      final service = AssignmentService(
+        courses: [
+          Course(id: 'c1', name: 'Mobile Development'),
+          Course(id: 'c2', name: 'Database Systems'),
+        ],
+        assignments: [],
+      );
+
+      service.addAssignment(
+        id: 'a1',
+        courseId: 'c1',
+        title: 'Flutter Homework',
+        dueDateTime: now,
+      );
       expect(service.getDeadlineStatus('a1', now), DeadlineStatus.dueToday);
       expect(
         service.getDeadlineStatus('a1', now.add(const Duration(seconds: 1))),
@@ -149,7 +212,19 @@ void main() {
     test(
       'queries filter by course and deletion preserves unrelated assignments',
       () {
-        final first = add();
+        final service = AssignmentService(
+          courses: [
+            Course(id: 'c1', name: 'Mobile Development'),
+            Course(id: 'c2', name: 'Database Systems'),
+          ],
+          assignments: [],
+        );
+
+        final first = service.addAssignment(
+          id: 'a1',
+          courseId: 'c1',
+          title: 'Flutter Homework',
+        );
         final second = service.addAssignment(
           id: 'a2',
           courseId: 'c2',
@@ -167,7 +242,19 @@ void main() {
     );
 
     test('operations reject missing assignment IDs without changing data', () {
-      final assignment = add();
+      final service = AssignmentService(
+        courses: [
+          Course(id: 'c1', name: 'Mobile Development'),
+          Course(id: 'c2', name: 'Database Systems'),
+        ],
+        assignments: [],
+      );
+
+      final assignment = service.addAssignment(
+        id: 'a1',
+        courseId: 'c1',
+        title: 'Flutter Homework',
+      );
       expect(
         () => service.updateAssignment(
           'missing',
